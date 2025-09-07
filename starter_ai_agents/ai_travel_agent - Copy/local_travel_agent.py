@@ -3,7 +3,7 @@ from agno.agent import Agent
 from agno.tools.serpapi import SerpApiTools
 import streamlit as st
 import re
-from agno.models.openai import OpenAIChat
+from agno.models.ollama import Ollama
 from icalendar import Calendar, Event
 from datetime import datetime, timedelta
 
@@ -57,34 +57,32 @@ def generate_ics_content(plan_text:str, start_date: datetime = None) -> bytes:
 
     return cal.to_ical()
 
+
 # Set up the Streamlit app
-st.title("AI Book Planner ")
-st.caption("Plan your next reading journey with AI Book Planner by researching books and creating a personalized reading plan using GPT-4o")
+st.title("AI Travel Planner using Llama-3.2 ")
+st.caption("Plan your next adventure with AI Travel Planner by researching and planning a personalized itinerary on autopilot using local Llama-3")
 
 # Initialize session state to store the generated itinerary
 if 'itinerary' not in st.session_state:
     st.session_state.itinerary = None
 
-# Get OpenAI API key from user
-openai_api_key = st.text_input("Enter OpenAI API Key to access GPT-4o", type="password")
-
 # Get SerpAPI key from the user
 serp_api_key = st.text_input("Enter Serp API Key for Search functionality", type="password")
 
-if openai_api_key and serp_api_key:
+if serp_api_key:
     researcher = Agent(
         name="Researcher",
-        role="Searches for books, authors, and reading resources based on user preferences",
-        model=OpenAIChat(id="gpt-4o", api_key=openai_api_key),
+        role="Searches for travel destinations, activities, and accommodations based on user preferences",
+        model=Ollama(id="llama3.2"),
         description=dedent(
             """\
-        You are a world-class book researcher. Given a reading theme/genre or author and the number of days the user wants to plan for,
-        generate a list of search terms for finding relevant books and reading resources.
+        You are a world-class travel researcher. Given a travel destination and the number of days the user wants to travel for,
+        generate a list of search terms for finding relevant travel activities and accommodations.
         Then search the web for each term, analyze the results, and return the 10 most relevant results.
         """
         ),
         instructions=[
-            "Given a reading theme/genre or author and the number of days the user wants to plan for, first generate a list of 3 search terms related to that theme and the number of days.",
+            "Given a travel destination and the number of days the user wants to travel for, first generate a list of 3 search terms related to that destination and the number of days.",
             "For each search term, `search_google` and analyze the results."
             "From the results of all searches, return the 10 most relevant results to the user's preferences.",
             "Remember: the quality of the results is important.",
@@ -94,18 +92,18 @@ if openai_api_key and serp_api_key:
     )
     planner = Agent(
         name="Planner",
-        role="Generates a draft reading plan based on user preferences and research results",
-        model=OpenAIChat(id="gpt-4o", api_key=openai_api_key),
+        role="Generates a draft itinerary based on user preferences and research results",
+        model=Ollama(id="llama3.2"),
         description=dedent(
             """\
-        You are a senior book planner. Given a reading theme/genre or author, the number of days the user wants to plan for, and a list of research results,
-        your goal is to generate a draft reading plan that meets the user's needs and preferences.
+        You are a senior travel planner. Given a travel destination, the number of days the user wants to travel for, and a list of research results,
+        your goal is to generate a draft itinerary that meets the user's needs and preferences.
         """
         ),
         instructions=[
-            "Given a reading theme/genre or author, the number of days the user wants to plan for, and a list of research results, generate a draft reading plan that includes suggested books, order, and daily goals.",
-            "Ensure the plan is well-structured, informative, and engaging.",
-            "Ensure you provide a nuanced and balanced plan, quoting facts where possible.",
+            "Given a travel destination, the number of days the user wants to travel for, and a list of research results, generate a draft itinerary that includes suggested activities and accommodations.",
+            "Ensure the itinerary is well-structured, informative, and engaging.",
+            "Ensure you provide a nuanced and balanced itinerary, quoting facts where possible.",
             "Remember: the quality of the itinerary is important.",
             "Focus on clarity, coherence, and overall quality.",
             "Never make up facts or plagiarize. Always provide proper attribution.",
@@ -114,30 +112,16 @@ if openai_api_key and serp_api_key:
     )
 
     # Input fields for the user's destination and the number of days they want to travel for
-    destination = st.text_input("What theme/genre or author are you planning to read?")
-    num_days = st.number_input("How many days is your reading plan?", min_value=1, max_value=30, value=7)
+    destination = st.text_input("Where do you want to go?")
+    num_days = st.number_input("How many days do you want to travel for?", min_value=1, max_value=30, value=7)
 
     col1, col2 = st.columns(2)
-
+    
     with col1:
-        if st.button("Generate Reading Plan"):
-            with st.spinner("Researching books and resources..."):
-                # First get research results
-                research_results = researcher.run(f"Research books about {destination} for a {num_days}-day reading plan", stream=False)
-
-                # Show research progress
-                st.write(" Research completed")
-                
-            with st.spinner("Creating your personalized reading plan..."):
-                # Pass research results to planner
-                prompt = f"""
-                Theme/Genre/Author: {destination}
-                Duration: {num_days} days
-                Research Results: {research_results.content}
-                
-                Please create a detailed reading plan based on this research.
-                """
-                response = planner.run(prompt, stream=False)
+        if st.button("Generate Itinerary"):
+            with st.spinner("Processing..."):
+                # Get the response from the assistant
+                response = planner.run(f"{destination} for {num_days} days", stream=False)
                 # Store the response in session state
                 st.session_state.itinerary = response.content
                 st.write(response.content)
@@ -150,8 +134,8 @@ if openai_api_key and serp_api_key:
             
             # Provide the file for download
             st.download_button(
-                label="Download Reading Plan as Calendar (.ics)",
+                label="Download Itinerary as Calendar (.ics)",
                 data=ics_content,
-                file_name="reading_plan.ics",
+                file_name="travel_itinerary.ics",
                 mime="text/calendar"
             )

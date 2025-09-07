@@ -1,11 +1,11 @@
-## 🛫 AI Travel Agent
-This Streamlit app is an AI-powered travel Agent that generates personalized travel itineraries using OpenAI GPT-4o. It automates the process of researching, planning, and organizing your dream vacation, allowing you to explore exciting destinations with ease.
+## 📚 AI Book Planner
+This Streamlit app is an AI-powered Book Planner that generates personalized reading plans using OpenAI GPT-4o. It automates the process of researching books, planning your reading schedule, and organizing your reading journey, allowing you to explore great books with ease.
 
 ### Features
-- Research and discover exciting travel destinations, activities, and accommodations
-- Customize your itinerary based on the number of days you want to travel
-- Utilize the power of GPT-4o to generate intelligent and personalized travel plans
-- Download your itinerary as a calendar (.ics) file to import into Google Calendar, Apple Calendar, or other calendar apps
+- Research and discover books, authors, and reading resources
+- Customize your reading plan based on the number of days you want to plan
+- Utilize the power of GPT-4o to generate intelligent and personalized reading plans
+- Download your reading plan as a calendar (.ics) file to import into Google Calendar, Apple Calendar, or other calendar apps
 
 ### How to get Started?
 
@@ -40,22 +40,22 @@ streamlit run local_travel_agent.py
 
 ### How it Works?
 
-The AI Travel Agent has two main components:
-- **Researcher:** Responsible for generating search terms based on the user's destination and travel duration, and searching the web for relevant activities and accommodations using SerpAPI.
-- **Planner:** Takes the research results and user preferences to generate a personalized draft itinerary that includes suggested activities, dining options, and accommodations.
+The AI Book Planner has two main components:
+- **Researcher:** Responsible for generating search terms based on the user's reading theme/genre or author and plan duration, and searching the web for relevant books and reading resources using SerpAPI.
+- **Planner:** Takes the research results and user preferences to generate a personalized draft reading plan that includes suggested books, order, and daily goals.
 
 ### Using the Calendar Download Feature
 
-After generating your travel itinerary:
-1. Click the "Download Itinerary as Calendar (.ics)" button that appears next to the "Generate Itinerary" button
+After generating your reading plan:
+1. Click the "Download Reading Plan as Calendar (.ics)" button that appears next to the "Generate Reading Plan" button
 2. Save the .ics file to your computer
 3. Import the file into your preferred calendar application (Google Calendar, Apple Calendar, Outlook, etc.)
-4. Each day of your itinerary will appear as an all-day event in your calendar
-5. The complete details for each day's activities are included in the event description
+4. Each day of your reading plan will appear as an all-day event in your calendar
+5. The complete details for each day's reading goals are included in the event description
 
 This feature makes it easy to keep track of your travel plans and have your itinerary available on all your devices, even offline.
 
 ### Local vs Cloud Version
 
-- **travel_agent.py**: Uses OpenAI's GPT-4o for high-quality itineraries (requires OpenAI API key)
+- **travel_agent.py**: Uses OpenAI's GPT-4o for high-quality reading plans (requires OpenAI API key)
 - **local_travel_agent.py**: Uses Ollama for local LLM inference without sending data to external APIs (requires Ollama to be installed and running)

@@ -1,5 +1,9 @@
 streamlit 
-agno
 openai
 google-search-results
 icalendar
+transformers>=4.41.0
+accelerate>=0.30.0
+torch ; platform_system != "Windows"
+torch==2.3.1+cu121 ; platform_system == "Windows" and platform_machine == "AMD64"
+--extra-index-url https://download.pytorch.org/whl/cu121

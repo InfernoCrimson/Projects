@@ -1,11 +1,10 @@
 from textwrap import dedent
-from agno.agent import Agent
-from agno.tools.serpapi import SerpApiTools
 import streamlit as st
 import re
-from agno.models.ollama import Ollama
 from icalendar import Calendar, Event
 from datetime import datetime, timedelta
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+import torch
 
 
 def generate_ics_content(plan_text:str, start_date: datetime = None) -> bytes:
@@ -59,83 +58,100 @@ def generate_ics_content(plan_text:str, start_date: datetime = None) -> bytes:
 
 
 # Set up the Streamlit app
-st.title("AI Travel Planner using Llama-3.2 ")
-st.caption("Plan your next adventure with AI Travel Planner by researching and planning a personalized itinerary on autopilot using local Llama-3")
+st.title("AI Book Planner (Hugging Face Local)")
+st.caption("Plan your next reading journey with AI Book Planner by researching books and creating a personalized reading plan using a local Hugging Face model")
 
 # Initialize session state to store the generated itinerary
 if 'itinerary' not in st.session_state:
     st.session_state.itinerary = None
 
-# Get SerpAPI key from the user
-serp_api_key = st.text_input("Enter Serp API Key for Search functionality", type="password")
+# HF model selection and lazy initialization
+default_model_id = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+model_id = st.text_input("Hugging Face model id", value=default_model_id)
 
-if serp_api_key:
-    researcher = Agent(
-        name="Researcher",
-        role="Searches for travel destinations, activities, and accommodations based on user preferences",
-        model=Ollama(id="llama3.2"),
-        description=dedent(
-            """\
-        You are a world-class travel researcher. Given a travel destination and the number of days the user wants to travel for,
-        generate a list of search terms for finding relevant travel activities and accommodations.
-        Then search the web for each term, analyze the results, and return the 10 most relevant results.
-        """
-        ),
-        instructions=[
-            "Given a travel destination and the number of days the user wants to travel for, first generate a list of 3 search terms related to that destination and the number of days.",
-            "For each search term, `search_google` and analyze the results."
-            "From the results of all searches, return the 10 most relevant results to the user's preferences.",
-            "Remember: the quality of the results is important.",
-        ],
-        tools=[SerpApiTools(api_key=serp_api_key)],
-        add_datetime_to_instructions=True,
+@st.cache_resource(show_spinner=False)
+def load_generator(selected_model_id: str):
+    tokenizer = AutoTokenizer.from_pretrained(selected_model_id)
+    model = AutoModelForCausalLM.from_pretrained(
+        selected_model_id,
+        torch_dtype=torch.float16 if torch.cuda.is_available() else None,
+        device_map="auto"
     )
-    planner = Agent(
-        name="Planner",
-        role="Generates a draft itinerary based on user preferences and research results",
-        model=Ollama(id="llama3.2"),
-        description=dedent(
-            """\
-        You are a senior travel planner. Given a travel destination, the number of days the user wants to travel for, and a list of research results,
-        your goal is to generate a draft itinerary that meets the user's needs and preferences.
-        """
-        ),
-        instructions=[
-            "Given a travel destination, the number of days the user wants to travel for, and a list of research results, generate a draft itinerary that includes suggested activities and accommodations.",
-            "Ensure the itinerary is well-structured, informative, and engaging.",
-            "Ensure you provide a nuanced and balanced itinerary, quoting facts where possible.",
-            "Remember: the quality of the itinerary is important.",
-            "Focus on clarity, coherence, and overall quality.",
-            "Never make up facts or plagiarize. Always provide proper attribution.",
-        ],
-        add_datetime_to_instructions=True,
+    generator = pipeline(
+        task="text-generation",
+        model=model,
+        tokenizer=tokenizer
     )
+    return generator
 
-    # Input fields for the user's destination and the number of days they want to travel for
-    destination = st.text_input("Where do you want to go?")
-    num_days = st.number_input("How many days do you want to travel for?", min_value=1, max_value=30, value=7)
+generator = load_generator(model_id)
 
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("Generate Itinerary"):
-            with st.spinner("Processing..."):
-                # Get the response from the assistant
-                response = planner.run(f"{destination} for {num_days} days", stream=False)
-                # Store the response in session state
-                st.session_state.itinerary = response.content
-                st.write(response.content)
-    
-    # Only show download button if there's an itinerary
-    with col2:
-        if st.session_state.itinerary:
+# Input fields for the user's destination and the number of days they want to travel for
+destination = st.text_input("What theme/genre or author are you planning to read?")
+num_days = st.number_input("How many days is your reading plan?", min_value=1, max_value=30, value=7)
+st.caption("Note: First-time model load downloads weights and may take a few minutes.")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    if st.button("Generate Reading Plan"):
+        with st.spinner("Creating your personalized reading plan..."):
+            system_prompt = "You are an expert reading planner."
+            user_prompt = f"""
+            Theme/Genre/Author: {destination}
+            Duration: {num_days} days
+
+            Generate a detailed reading plan including:
+            - Book recommendations (title, author)
+            - Suggested order with rationale
+            - Daily reading goals or chapters
+            - Brief synopsis per book
+            - Any prerequisites or complementary resources
+            Format the plan by Day 1, Day 2, ... for calendar export.
+            """
+
+            # Use chat template if available (for chat-tuned models)
+            if hasattr(generator.tokenizer, "apply_chat_template"):
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt.strip()},
+                ]
+                formatted = generator.tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True,
+                )
+            else:
+                formatted = f"{system_prompt}\n\n{user_prompt.strip()}"
+
+            gen_kwargs = {
+                "max_new_tokens": 256,
+                "temperature": 0.7,
+                "do_sample": True,
+                "top_p": 0.9,
+                "repetition_penalty": 1.05,
+                "return_full_text": False,
+            }
+            outputs = generator(formatted, **gen_kwargs)
+            text = outputs[0]["generated_text"] if isinstance(outputs, list) else str(outputs)
+            st.session_state.itinerary = text
+            st.write(text)
+
+# Only show download button if there's an itinerary
+with col2:
+    if st.session_state.itinerary:
+        try:
             # Generate the ICS file
-            ics_content = generate_ics_content(st.session_state.itinerary)
-            
+            ics_content = generate_ics_content(str(st.session_state.itinerary))
+
             # Provide the file for download
             st.download_button(
-                label="Download Itinerary as Calendar (.ics)",
+                label="Download Reading Plan as Calendar (.ics)",
                 data=ics_content,
-                file_name="travel_itinerary.ics",
+                file_name="reading_plan.ics",
                 mime="text/calendar"
             )
+        except Exception as e:
+            st.error(f"Failed to create calendar file: {e}")
+            with st.expander("Show generated plan text"):
+                st.write(st.session_state.itinerary)
