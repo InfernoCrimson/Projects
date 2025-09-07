@@ -1,6 +1,0 @@
-openai
-agno
-duckduckgo-search
-yfinance
-fastapi[standard] 
-sqlalchemy

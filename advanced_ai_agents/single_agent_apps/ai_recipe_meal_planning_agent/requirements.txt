@@ -1,5 +1,0 @@
-streamlit
-agno
-python-dotenv
-requests
-duckduckgo-search

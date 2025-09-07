@@ -1,5 +1,0 @@
-streamlit
-agno
-openai
-lancedb
-python-dotenv

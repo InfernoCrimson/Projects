@@ -1,7 +1,0 @@
-agno
-qdrant-client
-ollama
-pypdf 
-openai
-fastapi
-uvicorn

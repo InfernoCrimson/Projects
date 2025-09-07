@@ -1,4 +1,0 @@
-firecrawl-py
-streamlit
-agno
-openai

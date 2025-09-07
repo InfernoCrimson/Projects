@@ -1,8 +1,0 @@
-agno
-pypdf
-exa
-qdrant-client
-langchain-qdrant
-langchain-community
-streamlit
-ollama

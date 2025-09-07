@@ -1,4 +1,0 @@
-agno
-python-dotenv
-mcp
-openai
