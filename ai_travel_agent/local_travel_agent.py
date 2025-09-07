@@ -9,10 +9,10 @@ import torch
 
 def generate_ics_content(plan_text:str, start_date: datetime = None) -> bytes:
     """
-        Generate an ICS calendar file from a travel itinerary text.
+        Generate an ICS calendar file from a website itinerary text.
 
         Args:
-            plan_text: The travel itinerary text
+            plan_text: The website itinerary text
             start_date: Optional start date for the itinerary (defaults to today)
 
         Returns:
